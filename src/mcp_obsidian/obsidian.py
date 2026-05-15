@@ -38,7 +38,14 @@ class Obsidian():
         try:
             return f()
         except requests.HTTPError as e:
-            error_data = e.response.json() if e.response.content else {}
+            error_data = {}
+            if e.response is not None and e.response.content:
+                try:
+                    parsed = e.response.json()
+                    if isinstance(parsed, dict):
+                        error_data = parsed
+                except ValueError:
+                    pass
             code = error_data.get('errorCode', -1) 
             message = error_data.get('message', '<unknown>')
             raise Exception(f"Error {code}: {message}")
@@ -376,7 +383,7 @@ class Obsidian():
         return self._safe_call(call_fn)
 
 
-_HEADING_RE = re.compile(r"^(#+)\s+(.+?)\s*$")
+_HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
@@ -402,7 +409,7 @@ def _find_heading_paths(content: str, target: str) -> list[str]:
         if not m:
             continue
         level = len(m.group(1))
-        text = m.group(2).strip()
+        text = re.sub(r"\s+#+\s*$", "", m.group(2)).strip()
         while stack and stack[-1][0] >= level:
             stack.pop()
         stack.append((level, text))

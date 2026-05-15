@@ -58,6 +58,21 @@ def test_find_heading_paths_handles_sibling_after_descent():
     assert _find_heading_paths(content, "Übersicht") == ["Second::Übersicht"]
 
 
+def test_find_heading_paths_strips_closing_atx_hashes():
+    content = "# Outer\n\n## Done ##\n\nbody\n"
+    assert _find_heading_paths(content, "Done") == ["Outer::Done"]
+
+
+def test_find_heading_paths_allows_up_to_three_leading_spaces():
+    content = "# Outer\n\n   ## Indented\n\nbody\n"
+    assert _find_heading_paths(content, "Indented") == ["Outer::Indented"]
+
+
+def test_find_heading_paths_handles_fences_with_language_markers():
+    content = "# Real\n\n```python\n# Fake\n```\n\n## Actual\n"
+    assert _find_heading_paths(content, "Actual") == ["Real::Actual"]
+
+
 # --- patch_content fallback integration tests -----------------------------
 
 
@@ -151,6 +166,21 @@ def test_bare_heading_not_found_reraises_original_error():
         with pytest.raises(Exception) as excinfo:
             api.patch_content("f.md", "append", "heading", "Missing", "x")
         # Original error message format from _safe_call
+        assert "Error 40080" in str(excinfo.value)
+
+
+def test_bare_heading_get_failure_reraises_original_patch_error():
+    api = _make_obsidian()
+
+    fail_resp = MagicMock()
+    fail_resp.raise_for_status.side_effect = _http_error(400, 40080, "invalid-target")
+    fail_resp.content = b'{"errorCode": 40080, "message": "invalid-target"}'
+    fail_resp.json.return_value = {"errorCode": 40080, "message": "invalid-target"}
+
+    with patch("mcp_obsidian.obsidian.requests.patch", return_value=fail_resp), \
+         patch.object(api, "get_file_contents", side_effect=Exception("read failed")):
+        with pytest.raises(Exception) as excinfo:
+            api.patch_content("f.md", "append", "heading", "Missing", "x")
         assert "Error 40080" in str(excinfo.value)
 
 

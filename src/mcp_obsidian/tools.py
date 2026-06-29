@@ -936,3 +936,40 @@ class SearchCanvasesToolHandler(ToolHandler):
                 text=json.dumps(results, indent=2)
             )
         ]
+
+
+class GetCanvasStatsToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_get_canvas_stats")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get statistics about a canvas file (node and edge counts, bounding box).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        stats = api.get_canvas_stats(filepath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(stats, indent=2)
+            )
+        ]

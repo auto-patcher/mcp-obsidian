@@ -491,6 +491,24 @@ _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
         return self._safe_call(call_fn)
 
+    def get_canvas_stats(self, filepath: str) -> Any:
+        """Get statistics about a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+
+        Returns:
+            Canvas statistics including node counts, edge count, and bounding box
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/stats"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
 
 def _find_heading_paths(content: str, target: str) -> list[str]:
     """Return fully-qualified heading paths whose last segment matches target case-insensitively.

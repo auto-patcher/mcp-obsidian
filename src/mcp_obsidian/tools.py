@@ -1214,3 +1214,224 @@ class DeleteCanvasNodeToolHandler(ToolHandler):
                 text=f"Successfully deleted canvas node {node_id} from {filepath}"
             )
         ]
+
+
+class ListCanvasEdgesToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_list_canvas_edges")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="List all edges in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        edges = api.list_canvas_edges(filepath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(edges, indent=2)
+            )
+        ]
+
+
+class GetCanvasEdgeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_get_canvas_edge")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get a specific edge from a canvas file by its ID.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "edge_id": {
+                        "type": "string",
+                        "description": "The ID of the edge to retrieve"
+                    }
+                },
+                "required": ["filepath", "edge_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "edge_id" not in args:
+            raise RuntimeError("filepath and edge_id arguments required")
+
+        filepath = args["filepath"]
+        edge_id = args["edge_id"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        edge = api.get_canvas_edge(filepath, edge_id)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(edge, indent=2)
+            )
+        ]
+
+
+class CreateCanvasEdgeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_create_canvas_edge")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Create a new edge between two nodes in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "edge": {
+                        "type": "object",
+                        "description": "Edge data with fromNode, toNode, and optional properties",
+                        "properties": {
+                            "fromNode": {"type": "string"},
+                            "toNode": {"type": "string"},
+                            "fromSide": {"type": "string", "enum": ["top", "right", "bottom", "left"]},
+                            "toSide": {"type": "string", "enum": ["top", "right", "bottom", "left"]},
+                            "fromEnd": {"type": "string", "enum": ["none", "arrow"]},
+                            "toEnd": {"type": "string", "enum": ["none", "arrow"]},
+                            "color": {"type": "string"},
+                            "label": {"type": "string"}
+                        },
+                        "required": ["fromNode", "toNode"]
+                    }
+                },
+                "required": ["filepath", "edge"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "edge" not in args:
+            raise RuntimeError("filepath and edge arguments required")
+
+        filepath = args["filepath"]
+        edge = args["edge"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        created = api.create_canvas_edge(filepath, edge)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(created, indent=2)
+            )
+        ]
+
+
+class UpdateCanvasEdgeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_update_canvas_edge")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Update an edge in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "edge_id": {
+                        "type": "string",
+                        "description": "The ID of the edge to update"
+                    },
+                    "updates": {
+                        "type": "object",
+                        "description": "Fields to update on the edge"
+                    }
+                },
+                "required": ["filepath", "edge_id", "updates"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "edge_id" not in args or "updates" not in args:
+            raise RuntimeError("filepath, edge_id, and updates arguments required")
+
+        filepath = args["filepath"]
+        edge_id = args["edge_id"]
+        updates = args["updates"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        updated = api.update_canvas_edge(filepath, edge_id, updates)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(updated, indent=2)
+            )
+        ]
+
+
+class DeleteCanvasEdgeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_delete_canvas_edge")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Delete an edge from a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "edge_id": {
+                        "type": "string",
+                        "description": "The ID of the edge to delete"
+                    }
+                },
+                "required": ["filepath", "edge_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "edge_id" not in args:
+            raise RuntimeError("filepath and edge_id arguments required")
+
+        filepath = args["filepath"]
+        edge_id = args["edge_id"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api.delete_canvas_edge(filepath, edge_id)
+
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully deleted canvas edge {edge_id} from {filepath}"
+            )
+        ]

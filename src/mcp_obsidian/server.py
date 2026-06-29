@@ -62,6 +62,11 @@ add_tool_handler(tools.WriteCanvasToolHandler())
 add_tool_handler(tools.DeleteCanvasToolHandler())
 add_tool_handler(tools.SearchCanvasesToolHandler())
 add_tool_handler(tools.GetCanvasStatsToolHandler())
+add_tool_handler(tools.ListCanvasNodesToolHandler())
+add_tool_handler(tools.GetCanvasNodeToolHandler())
+add_tool_handler(tools.CreateCanvasNodeToolHandler())
+add_tool_handler(tools.UpdateCanvasNodeToolHandler())
+add_tool_handler(tools.DeleteCanvasNodeToolHandler())
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:

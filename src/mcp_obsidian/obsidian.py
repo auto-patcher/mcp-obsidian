@@ -509,6 +509,121 @@ _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
         return self._safe_call(call_fn)
 
+    def list_canvas_nodes(self, filepath: str, node_type: str = "") -> Any:
+        """List nodes in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            node_type: Optional filter by node type (text, file, link, group)
+
+        Returns:
+            List of canvas nodes
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/nodes"
+        params = {}
+        if node_type:
+            params['type'] = node_type
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), params=params, verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def get_canvas_node(self, filepath: str, node_id: str) -> Any:
+        """Get a specific node from a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            node_id: The ID of the node to retrieve
+
+        Returns:
+            The canvas node
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/nodes/{node_id}"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def create_canvas_node(self, filepath: str, node: dict) -> Any:
+        """Create a new node in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            node: Node data dict with type, x, y, width, height, and optional type-specific fields
+
+        Returns:
+            The created node with its generated ID
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/nodes"
+
+        def call_fn():
+            response = requests.post(
+                url,
+                headers=self._get_headers() | {'Content-Type': 'application/json'},
+                json=node,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def update_canvas_node(self, filepath: str, node_id: str, updates: dict) -> Any:
+        """Update a node in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            node_id: The ID of the node to update
+            updates: Dict of fields to update
+
+        Returns:
+            The updated node
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/nodes/{node_id}"
+
+        def call_fn():
+            response = requests.put(
+                url,
+                headers=self._get_headers() | {'Content-Type': 'application/json'},
+                json=updates,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def delete_canvas_node(self, filepath: str, node_id: str, delete_edges: bool = False) -> Any:
+        """Delete a node from a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            node_id: The ID of the node to delete
+            delete_edges: Whether to also delete edges connected to this node
+
+        Returns:
+            None on success
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/nodes/{node_id}"
+        params = {}
+        if delete_edges:
+            params['deleteEdges'] = 'true'
+
+        def call_fn():
+            response = requests.delete(url, headers=self._get_headers(), params=params, verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return None
+
+        return self._safe_call(call_fn)
+
 
 def _find_heading_paths(content: str, target: str) -> list[str]:
     """Return fully-qualified heading paths whose last segment matches target case-insensitively.

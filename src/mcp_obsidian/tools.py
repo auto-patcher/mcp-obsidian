@@ -973,3 +973,244 @@ class GetCanvasStatsToolHandler(ToolHandler):
                 text=json.dumps(stats, indent=2)
             )
         ]
+
+
+class ListCanvasNodesToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_list_canvas_nodes")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="List all nodes in a canvas file, optionally filtered by type.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "node_type": {
+                        "type": "string",
+                        "description": "Optional filter by node type (text, file, link, group)",
+                        "enum": ["text", "file", "link", "group"]
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+        node_type = args.get("node_type", "")
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        nodes = api.list_canvas_nodes(filepath, node_type)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(nodes, indent=2)
+            )
+        ]
+
+
+class GetCanvasNodeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_get_canvas_node")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get a specific node from a canvas file by its ID.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "description": "The ID of the node to retrieve"
+                    }
+                },
+                "required": ["filepath", "node_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "node_id" not in args:
+            raise RuntimeError("filepath and node_id arguments required")
+
+        filepath = args["filepath"]
+        node_id = args["node_id"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        node = api.get_canvas_node(filepath, node_id)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(node, indent=2)
+            )
+        ]
+
+
+class CreateCanvasNodeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_create_canvas_node")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Create a new node in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "node": {
+                        "type": "object",
+                        "description": "Node data with type, x, y, width, height, and optional type-specific fields",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": ["text", "file", "link", "group"]
+                            },
+                            "x": {"type": "number"},
+                            "y": {"type": "number"},
+                            "width": {"type": "number"},
+                            "height": {"type": "number"},
+                            "color": {"type": "string"},
+                            "text": {"type": "string"},
+                            "file": {"type": "string"},
+                            "subpath": {"type": "string"},
+                            "url": {"type": "string"},
+                            "label": {"type": "string"},
+                            "background": {"type": "string"},
+                            "backgroundStyle": {"type": "string"}
+                        },
+                        "required": ["type", "x", "y", "width", "height"]
+                    }
+                },
+                "required": ["filepath", "node"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "node" not in args:
+            raise RuntimeError("filepath and node arguments required")
+
+        filepath = args["filepath"]
+        node = args["node"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        created = api.create_canvas_node(filepath, node)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(created, indent=2)
+            )
+        ]
+
+
+class UpdateCanvasNodeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_update_canvas_node")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Update a node in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "description": "The ID of the node to update"
+                    },
+                    "updates": {
+                        "type": "object",
+                        "description": "Fields to update on the node"
+                    }
+                },
+                "required": ["filepath", "node_id", "updates"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "node_id" not in args or "updates" not in args:
+            raise RuntimeError("filepath, node_id, and updates arguments required")
+
+        filepath = args["filepath"]
+        node_id = args["node_id"]
+        updates = args["updates"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        updated = api.update_canvas_node(filepath, node_id, updates)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(updated, indent=2)
+            )
+        ]
+
+
+class DeleteCanvasNodeToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_delete_canvas_node")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Delete a node from a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "node_id": {
+                        "type": "string",
+                        "description": "The ID of the node to delete"
+                    },
+                    "delete_edges": {
+                        "type": "boolean",
+                        "description": "Whether to also delete edges connected to this node (default: false)",
+                        "default": False
+                    }
+                },
+                "required": ["filepath", "node_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "node_id" not in args:
+            raise RuntimeError("filepath and node_id arguments required")
+
+        filepath = args["filepath"]
+        node_id = args["node_id"]
+        delete_edges = args.get("delete_edges", False)
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api.delete_canvas_node(filepath, node_id, delete_edges)
+
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully deleted canvas node {node_id} from {filepath}"
+            )
+        ]

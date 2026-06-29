@@ -1435,3 +1435,228 @@ class DeleteCanvasEdgeToolHandler(ToolHandler):
                 text=f"Successfully deleted canvas edge {edge_id} from {filepath}"
             )
         ]
+
+
+class ListCanvasGroupsToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_list_canvas_groups")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="List all group nodes in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        groups = api.list_canvas_groups(filepath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(groups, indent=2)
+            )
+        ]
+
+
+class GetCanvasGroupToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_get_canvas_group")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Get a specific group node and the nodes it contains spatially.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "description": "The ID of the group to retrieve"
+                    }
+                },
+                "required": ["filepath", "group_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "group_id" not in args:
+            raise RuntimeError("filepath and group_id arguments required")
+
+        filepath = args["filepath"]
+        group_id = args["group_id"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        group = api.get_canvas_group(filepath, group_id)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(group, indent=2)
+            )
+        ]
+
+
+class CreateCanvasGroupToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_create_canvas_group")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Create a new group node in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "group": {
+                        "type": "object",
+                        "description": "Group node data with type=group, x, y, width, height, and optional properties",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "const": "group"
+                            },
+                            "x": {"type": "number"},
+                            "y": {"type": "number"},
+                            "width": {"type": "number"},
+                            "height": {"type": "number"},
+                            "label": {"type": "string"},
+                            "color": {"type": "string"},
+                            "background": {"type": "string"},
+                            "backgroundStyle": {"type": "string"}
+                        },
+                        "required": ["type", "x", "y", "width", "height"]
+                    }
+                },
+                "required": ["filepath", "group"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "group" not in args:
+            raise RuntimeError("filepath and group arguments required")
+
+        filepath = args["filepath"]
+        group = args["group"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        created = api.create_canvas_group(filepath, group)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(created, indent=2)
+            )
+        ]
+
+
+class UpdateCanvasGroupToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_update_canvas_group")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Update a group node in a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "description": "The ID of the group to update"
+                    },
+                    "updates": {
+                        "type": "object",
+                        "description": "Fields to update on the group"
+                    }
+                },
+                "required": ["filepath", "group_id", "updates"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "group_id" not in args or "updates" not in args:
+            raise RuntimeError("filepath, group_id, and updates arguments required")
+
+        filepath = args["filepath"]
+        group_id = args["group_id"]
+        updates = args["updates"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        updated = api.update_canvas_group(filepath, group_id, updates)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(updated, indent=2)
+            )
+        ]
+
+
+class DeleteCanvasGroupToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_delete_canvas_group")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Delete a group node from a canvas file.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "group_id": {
+                        "type": "string",
+                        "description": "The ID of the group to delete"
+                    }
+                },
+                "required": ["filepath", "group_id"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "group_id" not in args:
+            raise RuntimeError("filepath and group_id arguments required")
+
+        filepath = args["filepath"]
+        group_id = args["group_id"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api.delete_canvas_group(filepath, group_id)
+
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully deleted canvas group {group_id} from {filepath}"
+            )
+        ]

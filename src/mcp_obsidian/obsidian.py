@@ -731,6 +731,113 @@ _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
         return self._safe_call(call_fn)
 
+    def list_canvas_groups(self, filepath: str) -> Any:
+        """List all group nodes in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+
+        Returns:
+            List of canvas group nodes
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/groups"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def get_canvas_group(self, filepath: str, group_id: str) -> Any:
+        """Get a specific group and its contained nodes.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            group_id: The ID of the group to retrieve
+
+        Returns:
+            Group object and contained nodes
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/groups/{group_id}"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def create_canvas_group(self, filepath: str, group: dict) -> Any:
+        """Create a new group node in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            group: Group node data with type="group", x, y, width, height, and optional properties
+
+        Returns:
+            The created group with its generated ID
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/groups"
+
+        def call_fn():
+            response = requests.post(
+                url,
+                headers=self._get_headers() | {'Content-Type': 'application/json'},
+                json=group,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def update_canvas_group(self, filepath: str, group_id: str, updates: dict) -> Any:
+        """Update a group node in a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            group_id: The ID of the group to update
+            updates: Dict of fields to update
+
+        Returns:
+            The updated group
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/groups/{group_id}"
+
+        def call_fn():
+            response = requests.put(
+                url,
+                headers=self._get_headers() | {'Content-Type': 'application/json'},
+                json=updates,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def delete_canvas_group(self, filepath: str, group_id: str) -> Any:
+        """Delete a group node from a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            group_id: The ID of the group to delete
+
+        Returns:
+            None on success
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}/groups/{group_id}"
+
+        def call_fn():
+            response = requests.delete(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return None
+
+        return self._safe_call(call_fn)
+
 
 def _find_heading_paths(content: str, target: str) -> list[str]:
     """Return fully-qualified heading paths whose last segment matches target case-insensitively.

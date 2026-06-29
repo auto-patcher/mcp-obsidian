@@ -387,6 +387,111 @@ _HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$")
 _FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
+    def list_canvas_files(self, dirpath: str = "") -> Any:
+        """List all canvas files in a directory.
+
+        Args:
+            dirpath: Directory path (relative to vault root), defaults to root
+
+        Returns:
+            List of canvas files in the directory
+        """
+        if dirpath:
+            url = f"{self.get_base_url()}/canvas/{dirpath}/"
+        else:
+            url = f"{self.get_base_url()}/canvas/"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def get_canvas(self, filepath: str) -> Any:
+        """Get canvas JSON data.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+
+        Returns:
+            Canvas data (nodes and edges)
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}"
+
+        def call_fn():
+            response = requests.get(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def write_canvas(self, filepath: str, data: dict) -> Any:
+        """Create or overwrite a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+            data: Canvas data dict with nodes and edges arrays
+
+        Returns:
+            The written canvas data
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}"
+
+        def call_fn():
+            response = requests.put(
+                url,
+                headers=self._get_headers() | {'Content-Type': 'application/json'},
+                json=data,
+                verify=self.verify_ssl,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+    def delete_canvas(self, filepath: str) -> Any:
+        """Delete a canvas file.
+
+        Args:
+            filepath: Path to the canvas file (relative to vault root)
+
+        Returns:
+            None on success
+        """
+        url = f"{self.get_base_url()}/canvas/{filepath}"
+
+        def call_fn():
+            response = requests.delete(url, headers=self._get_headers(), verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return None
+
+        return self._safe_call(call_fn)
+
+    def search_canvases(self, query: str, dirpath: str = "") -> Any:
+        """Search canvas files.
+
+        Args:
+            query: Search query string
+            dirpath: Optional directory path to scope search
+
+        Returns:
+            Search results
+        """
+        url = f"{self.get_base_url()}/canvas/search/"
+        params = {'query': query}
+        if dirpath:
+            params['dirPath'] = dirpath
+
+        def call_fn():
+            response = requests.post(url, headers=self._get_headers(), params=params, verify=self.verify_ssl, timeout=self.timeout)
+            response.raise_for_status()
+            return response.json()
+
+        return self._safe_call(call_fn)
+
+
 def _find_heading_paths(content: str, target: str) -> list[str]:
     """Return fully-qualified heading paths whose last segment matches target case-insensitively.
 

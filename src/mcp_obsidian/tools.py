@@ -734,3 +734,205 @@ class RecentChangesToolHandler(ToolHandler):
                 text=json.dumps(results, indent=2)
             )
         ]
+
+
+class ListCanvasFilesToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_list_canvas_files")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="List all canvas files in the vault or a specific directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "dirpath": {
+                        "type": "string",
+                        "description": "Directory path (relative to vault root). Defaults to vault root."
+                    }
+                }
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        dirpath = args.get("dirpath", "")
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        files = api.list_canvas_files(dirpath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(files, indent=2)
+            )
+        ]
+
+
+class GetCanvasToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_get_canvas")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Read a canvas file and get its JSON data (nodes and edges).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        canvas = api.get_canvas(filepath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(canvas, indent=2)
+            )
+        ]
+
+
+class WriteCanvasToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_write_canvas")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Create or overwrite a canvas file with JSON data.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    },
+                    "data": {
+                        "type": "object",
+                        "description": "Canvas data with nodes and edges arrays",
+                        "properties": {
+                            "nodes": {
+                                "type": "array",
+                                "description": "Array of canvas nodes"
+                            },
+                            "edges": {
+                                "type": "array",
+                                "description": "Array of canvas edges"
+                            }
+                        },
+                        "required": ["nodes", "edges"]
+                    }
+                },
+                "required": ["filepath", "data"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args or "data" not in args:
+            raise RuntimeError("filepath and data arguments required")
+
+        filepath = args["filepath"]
+        data = args["data"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        result = api.write_canvas(filepath, data)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(result, indent=2)
+            )
+        ]
+
+
+class DeleteCanvasToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_delete_canvas")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Delete a canvas file from the vault.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the canvas file (relative to vault root)"
+                    }
+                },
+                "required": ["filepath"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "filepath" not in args:
+            raise RuntimeError("filepath argument required")
+
+        filepath = args["filepath"]
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        api.delete_canvas(filepath)
+
+        return [
+            TextContent(
+                type="text",
+                text=f"Successfully deleted canvas file {filepath}"
+            )
+        ]
+
+
+class SearchCanvasesToolHandler(ToolHandler):
+    def __init__(self):
+        super().__init__("obsidian_search_canvases")
+
+    def get_tool_description(self):
+        return Tool(
+            name=self.name,
+            description="Search canvas files by query.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query string"
+                    },
+                    "dirpath": {
+                        "type": "string",
+                        "description": "Optional directory path to scope search (relative to vault root)"
+                    }
+                },
+                "required": ["query"]
+            }
+        )
+
+    def run_tool(self, args: dict) -> Sequence[TextContent | ImageContent | EmbeddedResource]:
+        if "query" not in args:
+            raise RuntimeError("query argument required")
+
+        query = args["query"]
+        dirpath = args.get("dirpath", "")
+
+        api = obsidian.Obsidian(api_key=api_key, host=obsidian_host)
+        results = api.search_canvases(query, dirpath)
+
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(results, indent=2)
+            )
+        ]

@@ -19,7 +19,7 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python311;
+        python = pkgs.python312;
       in
       {
         devShells.default = pkgs.mkShell {
@@ -27,6 +27,9 @@
             python
             pkgs.uv
             pkgs.git
+            (python.pkgs.pyright or pkgs.pyright)
+            python.pkgs.pytest
+            python.pkgs.pytest-cov
           ];
 
           shellHook = ''
@@ -38,7 +41,7 @@
 
         packages.default = python.pkgs.buildPythonPackage rec {
           pname = "mcp-obsidian";
-          version = "0.2.2";
+          version = "0.2.3";
           pyproject = true;
           src = ./.;
 
@@ -55,7 +58,6 @@
           nativeCheckInputs = with python.pkgs; [
             pytest
             pytest-cov
-            pyright
           ];
 
           checkPhase = ''

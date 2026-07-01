@@ -44,6 +44,7 @@ func allTools(client *obsidian.Client) []toolEntry {
 		contentTools(client),
 		periodicTools(client),
 		frontmatterTools(client),
+		canvasTools(client),
 	} {
 		all = append(all, g...)
 	}

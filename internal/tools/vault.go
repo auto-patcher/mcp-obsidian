@@ -83,18 +83,11 @@ func vaultTools(client *obsidian.Client) []toolEntry {
 					mcp.Required(),
 					mcp.Description("Path to the file to delete (relative to vault root)."),
 				),
-				mcp.WithBoolean("confirm",
-					mcp.Required(),
-					mcp.Description("Must be true to confirm deletion."),
-				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				fp := argString(args, "filepath")
 				if fp == "" {
 					return fail("filepath is required")
-				}
-				if !argBool(args, "confirm", false) {
-					return fail("confirm must be true to delete a file")
 				}
 				if err := client.DeleteFile(fp); err != nil {
 					return fail("delete file: %w", err)

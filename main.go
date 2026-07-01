@@ -14,8 +14,7 @@ import (
 func main() {
 	cfg := obsidian.ConfigFromEnv()
 	if cfg.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "error: OBSIDIAN_API_KEY environment variable required")
-		os.Exit(1)
+		fmt.Fprintln(os.Stderr, "warning: OBSIDIAN_API_KEY is not set — requests will receive 401 from Obsidian")
 	}
 
 	client := obsidian.New(cfg)

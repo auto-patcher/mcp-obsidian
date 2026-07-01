@@ -11,13 +11,10 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 		// --- Canvas file operations -------------------------------------------
 		{
 			mcp.NewTool("obsidian_list_canvas_files",
-				mcp.WithDescription("List all canvas (.canvas) files in the vault or a specific directory."),
-				mcp.WithString("dirpath",
-					mcp.Description("Directory path relative to vault root. Omit for vault root."),
-				),
+				mcp.WithDescription("List all canvas (.canvas) files in the vault."),
 			),
-			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
-				raw, err := client.ListCanvasFiles(argString(args, "dirpath"))
+			noCtx(func(_ map[string]any) (*mcp.CallToolResult, error) {
+				raw, err := client.ListCanvasFiles("")
 				if err != nil {
 					return fail("list canvas files: %w", err)
 				}
@@ -46,12 +43,12 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 		},
 		{
 			mcp.NewTool("obsidian_write_canvas",
-				mcp.WithDescription("Create or completely overwrite a canvas file with the provided JSON data (nodes and edges arrays)."),
+				mcp.WithDescription(`Create or completely overwrite a canvas file with the provided JSON data (nodes and edges arrays).`),
 				mcp.WithString("filepath",
 					mcp.Required(),
 					mcp.Description("Path to the .canvas file (relative to vault root)."),
 				),
-				mcp.WithObject("data",
+				mcp.WithObject("canvas",
 					mcp.Required(),
 					mcp.Description(`Canvas JSON with 'nodes' and 'edges' arrays. Example: {"nodes": [], "edges": []}`),
 				),
@@ -61,11 +58,11 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 				if fp == "" {
 					return fail("filepath is required")
 				}
-				data, hasData := args["data"]
-				if !hasData {
-					return fail("data is required")
+				canvasData, hasCanvas := args["canvas"]
+				if !hasCanvas {
+					return fail("canvas is required")
 				}
-				raw, err := client.WriteCanvas(fp, data)
+				raw, err := client.WriteCanvas(fp, canvasData)
 				if err != nil {
 					return fail("write canvas: %w", err)
 				}
@@ -98,16 +95,13 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 					mcp.Required(),
 					mcp.Description("Search query string."),
 				),
-				mcp.WithString("dirpath",
-					mcp.Description("Optional directory to scope the search (relative to vault root)."),
-				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				query := argString(args, "query")
 				if query == "" {
 					return fail("query is required")
 				}
-				raw, err := client.SearchCanvases(query, argString(args, "dirpath"))
+				raw, err := client.SearchCanvases(query, "")
 				if err != nil {
 					return fail("search canvases: %w", err)
 				}
@@ -143,7 +137,7 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 					mcp.Required(),
 					mcp.Description("Path to the .canvas file (relative to vault root)."),
 				),
-				mcp.WithString("node_type",
+				mcp.WithString("type",
 					mcp.Description("Filter by node type."),
 					mcp.Enum("text", "file", "link", "group"),
 				),
@@ -153,7 +147,7 @@ func canvasTools(client *obsidian.Client) []toolEntry {
 				if fp == "" {
 					return fail("filepath is required")
 				}
-				raw, err := client.ListCanvasNodes(fp, argString(args, "node_type"))
+				raw, err := client.ListCanvasNodes(fp, argString(args, "type"))
 				if err != nil {
 					return fail("list canvas nodes: %w", err)
 				}
@@ -227,18 +221,18 @@ Type-specific fields:
 					mcp.Required(),
 					mcp.Description("The ID of the node to update."),
 				),
-				mcp.WithObject("updates",
+				mcp.WithObject("node",
 					mcp.Required(),
-					mcp.Description("Fields to update (e.g. {\"x\": 100, \"text\": \"new content\"})."),
+					mcp.Description(`Fields to update on the node (e.g. {"x": 100, "text": "new content"}).`),
 				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				fp, nodeID := argString(args, "filepath"), argString(args, "node_id")
-				updates, hasUpdates := args["updates"]
-				if fp == "" || nodeID == "" || !hasUpdates {
-					return fail("filepath, node_id, and updates are required")
+				node, hasNode := args["node"]
+				if fp == "" || nodeID == "" || !hasNode {
+					return fail("filepath, node_id, and node are required")
 				}
-				raw, err := client.UpdateCanvasNode(fp, nodeID, updates)
+				raw, err := client.UpdateCanvasNode(fp, nodeID, node)
 				if err != nil {
 					return fail("update canvas node: %w", err)
 				}
@@ -356,18 +350,18 @@ Optional: fromSide/toSide (top|right|bottom|left), fromEnd/toEnd (none|arrow), c
 					mcp.Required(),
 					mcp.Description("The ID of the edge to update."),
 				),
-				mcp.WithObject("updates",
+				mcp.WithObject("edge",
 					mcp.Required(),
-					mcp.Description("Fields to update."),
+					mcp.Description("Fields to update on the edge."),
 				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				fp, edgeID := argString(args, "filepath"), argString(args, "edge_id")
-				updates, hasUpdates := args["updates"]
-				if fp == "" || edgeID == "" || !hasUpdates {
-					return fail("filepath, edge_id, and updates are required")
+				edge, hasEdge := args["edge"]
+				if fp == "" || edgeID == "" || !hasEdge {
+					return fail("filepath, edge_id, and edge are required")
 				}
-				raw, err := client.UpdateCanvasEdge(fp, edgeID, updates)
+				raw, err := client.UpdateCanvasEdge(fp, edgeID, edge)
 				if err != nil {
 					return fail("update canvas edge: %w", err)
 				}
@@ -482,18 +476,18 @@ Optional: label, color, background, backgroundStyle.`),
 					mcp.Required(),
 					mcp.Description("The ID of the group to update."),
 				),
-				mcp.WithObject("updates",
+				mcp.WithObject("group",
 					mcp.Required(),
-					mcp.Description("Fields to update."),
+					mcp.Description("Fields to update on the group."),
 				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				fp, groupID := argString(args, "filepath"), argString(args, "group_id")
-				updates, hasUpdates := args["updates"]
-				if fp == "" || groupID == "" || !hasUpdates {
-					return fail("filepath, group_id, and updates are required")
+				group, hasGroup := args["group"]
+				if fp == "" || groupID == "" || !hasGroup {
+					return fail("filepath, group_id, and group are required")
 				}
-				raw, err := client.UpdateCanvasGroup(fp, groupID, updates)
+				raw, err := client.UpdateCanvasGroup(fp, groupID, group)
 				if err != nil {
 					return fail("update canvas group: %w", err)
 				}

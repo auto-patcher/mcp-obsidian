@@ -16,37 +16,40 @@ import (
 
 // Config holds the Obsidian Local REST API connection settings.
 type Config struct {
-	APIKey    string
-	Protocol  string
-	Host      string
-	Port      int
-	VerifySSL bool
+	APIKey  string
+	BaseURL string // explicit base URL (overrides Protocol/Host/Port)
+	Protocol string
+	Host     string
+	Port     int
 }
 
 // ConfigFromEnv reads Config from environment variables.
-// Defaults match the Python implementation.
+// If OBSIDIAN_BASE_URL is set it is used as-is (trailing slash stripped).
+// Otherwise the URL is constructed from OBSIDIAN_PROTOCOL (default https),
+// OBSIDIAN_HOST (default 127.0.0.1), and OBSIDIAN_PORT (default 27124).
 func ConfigFromEnv() Config {
-	protocol := os.Getenv("OBSIDIAN_PROTOCOL")
-	if protocol == "" {
-		protocol = "https"
+	cfg := Config{
+		APIKey: os.Getenv("OBSIDIAN_API_KEY"),
 	}
-	host := os.Getenv("OBSIDIAN_HOST")
-	if host == "" {
-		host = "127.0.0.1"
+	if base := os.Getenv("OBSIDIAN_BASE_URL"); base != "" {
+		cfg.BaseURL = strings.TrimRight(base, "/")
+		return cfg
 	}
-	port := 27124
+	cfg.Protocol = os.Getenv("OBSIDIAN_PROTOCOL")
+	if cfg.Protocol == "" {
+		cfg.Protocol = "https"
+	}
+	cfg.Host = os.Getenv("OBSIDIAN_HOST")
+	if cfg.Host == "" {
+		cfg.Host = "127.0.0.1"
+	}
+	cfg.Port = 27124
 	if p := os.Getenv("OBSIDIAN_PORT"); p != "" {
 		if n, err := strconv.Atoi(p); err == nil {
-			port = n
+			cfg.Port = n
 		}
 	}
-	return Config{
-		APIKey:    os.Getenv("OBSIDIAN_API_KEY"),
-		Protocol:  protocol,
-		Host:      host,
-		Port:      port,
-		VerifySSL: false,
-	}
+	return cfg
 }
 
 // Client is an HTTP client for the Obsidian Local REST API.
@@ -58,12 +61,16 @@ type Client struct {
 
 // New constructs a Client from cfg.
 func New(cfg Config) *Client {
+	baseURL := cfg.BaseURL
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("%s://%s:%d", cfg.Protocol, cfg.Host, cfg.Port)
+	}
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: !cfg.VerifySSL}, //nolint:gosec
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 	}
 	return &Client{
 		cfg:     cfg,
-		baseURL: fmt.Sprintf("%s://%s:%d", cfg.Protocol, cfg.Host, cfg.Port),
+		baseURL: baseURL,
 		httpClient: &http.Client{
 			Transport: transport,
 			Timeout:   9 * time.Second,
@@ -79,11 +86,19 @@ type apiErrBody struct {
 // do performs an HTTP request. Non-2xx responses become errors; Obsidian's
 // errorCode and message are surfaced when available.
 func (c *Client) do(method, path string, headers map[string]string, body []byte) ([]byte, error) {
-	req, err := http.NewRequest(method, c.baseURL+path, bytes.NewReader(body))
+	var bodyReader *bytes.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	} else {
+		bodyReader = bytes.NewReader(nil)
+	}
+	req, err := http.NewRequest(method, c.baseURL+path, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
-	req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
+	if c.cfg.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.cfg.APIKey)
+	}
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}

@@ -25,7 +25,7 @@ type Config struct {
 
 // ConfigFromEnv reads Config from environment variables.
 // If OBSIDIAN_BASE_URL is set it is used as-is (trailing slash stripped).
-// Otherwise the URL is constructed from OBSIDIAN_PROTOCOL (default https),
+// Otherwise the URL is constructed from OBSIDIAN_PROTOCOL (default http),
 // OBSIDIAN_HOST (default 127.0.0.1), and OBSIDIAN_PORT (default 27124).
 func ConfigFromEnv() Config {
 	cfg := Config{
@@ -37,7 +37,7 @@ func ConfigFromEnv() Config {
 	}
 	cfg.Protocol = os.Getenv("OBSIDIAN_PROTOCOL")
 	if cfg.Protocol == "" {
-		cfg.Protocol = "https"
+		cfg.Protocol = "http"
 	}
 	cfg.Host = os.Getenv("OBSIDIAN_HOST")
 	if cfg.Host == "" {

@@ -19,55 +19,34 @@
       system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-        python = pkgs.python312;
       in
       {
         devShells.default = pkgs.mkShell {
-          buildInputs = [
-            python
-            pkgs.uv
-            pkgs.git
-            (python.pkgs.pyright or pkgs.pyright)
-            python.pkgs.pytest
-            python.pkgs.pytest-cov
+          buildInputs = with pkgs; [
+            go
+            gopls
+            gotools
+            git
           ];
 
           shellHook = ''
             echo "MCP Obsidian dev environment loaded"
-            echo "Python version: $(python --version)"
-            echo "uv version: $(uv --version)"
+            echo "Go version: $(go version)"
           '';
         };
 
-        packages.default = python.pkgs.buildPythonPackage rec {
+        packages.default = pkgs.buildGoModule {
           pname = "mcp-obsidian";
-          version = "0.2.3";
-          pyproject = true;
+          version = "0.3.0";
           src = ./.;
 
-          build-system = with python.pkgs; [
-            hatchling
-          ];
-
-          dependencies = with python.pkgs; [
-            mcp
-            python-dotenv
-            requests
-          ];
-
-          nativeCheckInputs = with python.pkgs; [
-            pytest
-            pytest-cov
-          ];
-
-          checkPhase = ''
-            python -m pytest
-          '';
+          # Run `nix build` once to get the real hash, then replace this.
+          vendorHash = pkgs.lib.fakeHash;
 
           meta = {
             description = "MCP server for Obsidian via the Local REST API";
             longDescription = ''
-              An MCP (Model Context Protocol) server that bridges the Python/CLI ecosystem
+              An MCP (Model Context Protocol) server that bridges the Go/CLI ecosystem
               with Obsidian, allowing scripts, tools, and AI agents to interact with an
               Obsidian vault through the Local REST API plugin.
             '';

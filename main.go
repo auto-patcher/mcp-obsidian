@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/url"
 	"os"
-	"strings"
 
 	"github.com/mark3labs/mcp-go/server"
 
@@ -14,9 +14,9 @@ import (
 
 func main() {
 	cfg := obsidian.ConfigFromEnv()
-	isHTTPS := strings.HasPrefix(cfg.BaseURL, "https://") || cfg.Protocol == "https"
-	if isHTTPS && cfg.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "warning: OBSIDIAN_API_KEY not set but HTTPS is configured \u2014 requests will be unauthenticated")
+	u, _ := url.Parse(cfg.BaseURL)
+	if u.Scheme == "https" && cfg.APIKey == "" {
+		fmt.Fprintln(os.Stderr, "warning: OBSIDIAN_API_KEY not set but HTTPS is configured — requests will be unauthenticated")
 	}
 
 	client := obsidian.New(cfg)

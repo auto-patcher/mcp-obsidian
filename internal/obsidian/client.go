@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -17,60 +16,39 @@ import (
 // Config holds the Obsidian Local REST API connection settings.
 type Config struct {
 	APIKey  string
-	BaseURL string // explicit base URL (overrides Protocol/Host/Port)
-	Protocol string
-	Host     string
-	Port     int
+	BaseURL string // e.g. "http://127.0.0.1:27124"
 }
 
 // ConfigFromEnv reads Config from environment variables.
-// If OBSIDIAN_BASE_URL is set it is used as-is (trailing slash stripped).
-// Otherwise the URL is constructed from OBSIDIAN_PROTOCOL (default http),
-// OBSIDIAN_HOST (default 127.0.0.1), and OBSIDIAN_PORT (default 27124).
+// OBSIDIAN_BASE_URL sets the base URL (default: http://127.0.0.1:27124).
 func ConfigFromEnv() Config {
-	cfg := Config{
-		APIKey: os.Getenv("OBSIDIAN_API_KEY"),
+	base := os.Getenv("OBSIDIAN_BASE_URL")
+	if base == "" {
+		base = "http://127.0.0.1:27124"
 	}
-	if base := os.Getenv("OBSIDIAN_BASE_URL"); base != "" {
-		cfg.BaseURL = strings.TrimRight(base, "/")
-		return cfg
+	base = strings.TrimRight(base, "/")
+	if _, err := url.Parse(base); err != nil {
+		log.Fatalf("invalid OBSIDIAN_BASE_URL %q: %v", base, err)
 	}
-	cfg.Protocol = os.Getenv("OBSIDIAN_PROTOCOL")
-	if cfg.Protocol == "" {
-		cfg.Protocol = "http"
+	return Config{
+		APIKey:  os.Getenv("OBSIDIAN_API_KEY"),
+		BaseURL: base,
 	}
-	cfg.Host = os.Getenv("OBSIDIAN_HOST")
-	if cfg.Host == "" {
-		cfg.Host = "127.0.0.1"
-	}
-	cfg.Port = 27124
-	if p := os.Getenv("OBSIDIAN_PORT"); p != "" {
-		if n, err := strconv.Atoi(p); err == nil {
-			cfg.Port = n
-		}
-	}
-	return cfg
 }
 
 // Client is an HTTP client for the Obsidian Local REST API.
 type Client struct {
 	cfg        Config
-	baseURL    string
 	httpClient *http.Client
 }
 
 // New constructs a Client from cfg.
 func New(cfg Config) *Client {
-	baseURL := cfg.BaseURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("%s://%s:%d", cfg.Protocol, cfg.Host, cfg.Port)
-	}
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 	}
 	return &Client{
-		cfg:     cfg,
-		baseURL: baseURL,
+		cfg: cfg,
 		httpClient: &http.Client{
 			Transport: transport,
 			Timeout:   9 * time.Second,
@@ -92,7 +70,7 @@ func (c *Client) do(method, path string, headers map[string]string, body []byte)
 	} else {
 		bodyReader = bytes.NewReader(nil)
 	}
-	req, err := http.NewRequest(method, c.baseURL+path, bodyReader)
+	req, err := http.NewRequest(method, c.cfg.BaseURL+path, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}

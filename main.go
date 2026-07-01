@@ -14,8 +14,9 @@ import (
 
 func main() {
 	cfg := obsidian.ConfigFromEnv()
-	if strings.HasPrefix(cfg.BaseURL, "https://") && cfg.APIKey == "" {
-		fmt.Fprintln(os.Stderr, "warning: OBSIDIAN_API_KEY not set but HTTPS is configured — requests will be unauthenticated")
+	isHTTPS := strings.HasPrefix(cfg.BaseURL, "https://") || cfg.Protocol == "https"
+	if isHTTPS && cfg.APIKey == "" {
+		fmt.Fprintln(os.Stderr, "warning: OBSIDIAN_API_KEY not set but HTTPS is configured \u2014 requests will be unauthenticated")
 	}
 
 	client := obsidian.New(cfg)

@@ -43,7 +43,6 @@ func allTools(client *obsidian.Client) []toolEntry {
 		searchTools(client),
 		contentTools(client),
 		periodicTools(client),
-		frontmatterTools(client),
 		canvasTools(client),
 	} {
 		all = append(all, g...)
@@ -76,18 +75,42 @@ func argBool(args map[string]any, key string, def bool) bool {
 	return def
 }
 
-func argStringSlice(args map[string]any, key string) []string {
-	arr, ok := args[key].([]any)
+// argFilepaths accepts a single string or an array of strings and returns a
+// non-empty slice. Returns an error if the field is missing or empty.
+func argFilepaths(args map[string]any, key string) ([]string, error) {
+	v, ok := args[key]
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("%s is required", key)
 	}
-	out := make([]string, 0, len(arr))
-	for _, item := range arr {
-		if s, ok := item.(string); ok {
-			out = append(out, s)
+	switch t := v.(type) {
+	case string:
+		if t == "" {
+			return nil, fmt.Errorf("%s is required", key)
 		}
+		return []string{t}, nil
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		if len(out) == 0 {
+			return nil, fmt.Errorf("%s must be a non-empty string or array of strings", key)
+		}
+		return out, nil
+	default:
+		return nil, fmt.Errorf("%s must be a string or array of strings", key)
 	}
-	return out
+}
+
+// jsonString encodes s as a JSON string literal (including quotes and escapes).
+func jsonString(s string) string {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return `""`
+	}
+	return string(b)
 }
 
 // --- result helpers ----------------------------------------------------------

@@ -9,8 +9,8 @@ import (
 func contentTools(client *obsidian.Client) []toolEntry {
 	return []toolEntry{
 		{
-			mcp.NewTool("obsidian_append_content",
-				mcp.WithDescription("Append content to a new or existing file in the vault."),
+			mcp.NewTool("obsidian_append_to_note",
+				mcp.WithDescription("Append content to the end of an existing note. Creates the file if it does not exist."),
 				mcp.WithString("filepath",
 					mcp.Required(),
 					mcp.Description("Path to the file (relative to vault root)."),
@@ -27,13 +27,13 @@ func contentTools(client *obsidian.Client) []toolEntry {
 					return fail("filepath and content are required")
 				}
 				if err := client.AppendContent(fp, content); err != nil {
-					return fail("append content: %w", err)
+					return fail("append to note: %w", err)
 				}
 				return textOK("Successfully appended content to " + fp)
 			}),
 		},
 		{
-			mcp.NewTool("obsidian_patch_content",
+			mcp.NewTool("obsidian_patch_note",
 				mcp.WithDescription(`Insert content into an existing note relative to a heading, block reference, or frontmatter field.
 
 For target_type='heading', target is the fully-qualified heading path with '::' separator (e.g. 'Outer::Inner'). Bare heading names (no '::') are auto-qualified if they match exactly one heading in the file.`),
@@ -70,14 +70,14 @@ For target_type='heading', target is the fully-qualified heading path with '::' 
 					return fail("filepath, operation, target_type, and target are required")
 				}
 				if err := client.PatchContent(fp, operation, targetType, target, content); err != nil {
-					return fail("patch content: %w", err)
+					return fail("patch note: %w", err)
 				}
 				return textOK("Successfully patched content in " + fp)
 			}),
 		},
 		{
-			mcp.NewTool("obsidian_put_content",
-				mcp.WithDescription("Create a new file or COMPLETELY OVERWRITE an existing file. Previous content is lost. Use obsidian_append_content to add without erasing, or obsidian_patch_content to modify a specific section."),
+			mcp.NewTool("obsidian_write_note",
+				mcp.WithDescription("Create a new note or COMPLETELY OVERWRITE an existing note. Previous content is lost. Use obsidian_append_to_note to add without erasing, or obsidian_patch_note to modify a specific section."),
 				mcp.WithString("filepath",
 					mcp.Required(),
 					mcp.Description("Path to the file (relative to vault root)."),
@@ -94,9 +94,28 @@ For target_type='heading', target is the fully-qualified heading path with '::' 
 					return fail("filepath and content are required")
 				}
 				if err := client.PutContent(fp, content); err != nil {
-					return fail("put content: %w", err)
+					return fail("write note: %w", err)
 				}
 				return textOK("Successfully wrote content to " + fp)
+			}),
+		},
+		{
+			mcp.NewTool("obsidian_open_in_ui",
+				mcp.WithDescription("Open a note in the Obsidian UI. If the file does not exist, Obsidian creates a new document at the given path."),
+				mcp.WithString("filepath",
+					mcp.Required(),
+					mcp.Description("Path to the file (relative to vault root)."),
+				),
+			),
+			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
+				fp := argString(args, "filepath")
+				if fp == "" {
+					return fail("filepath is required")
+				}
+				if err := client.OpenInUI(fp); err != nil {
+					return fail("open in ui: %w", err)
+				}
+				return textOK("Opened " + fp + " in Obsidian")
 			}),
 		},
 	}

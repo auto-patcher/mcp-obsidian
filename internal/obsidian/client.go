@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -219,6 +220,13 @@ func (c *Client) PutContent(filepath, content string) error {
 // DeleteFile deletes a vault file.
 func (c *Client) DeleteFile(filepath string) error {
 	_, err := c.do(http.MethodDelete, "/vault/"+filepath, nil, nil)
+	return err
+}
+
+// OpenInUI opens a file in the Obsidian UI. If the file does not exist,
+// Obsidian creates a new document at the given path.
+func (c *Client) OpenInUI(filepath string) error {
+	_, err := c.do(http.MethodPost, "/open/"+filepath, nil, nil)
 	return err
 }
 

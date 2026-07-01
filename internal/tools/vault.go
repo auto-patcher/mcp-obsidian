@@ -1,6 +1,8 @@
 package tools
 
 import (
+	"encoding/json"
+
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/auto-patcher/mcp-obsidian/internal/obsidian"
@@ -9,76 +11,56 @@ import (
 func vaultTools(client *obsidian.Client) []toolEntry {
 	return []toolEntry{
 		{
-			mcp.NewTool("obsidian_list_files_in_vault",
-				mcp.WithDescription("Lists all files and directories in the root directory of your Obsidian vault."),
-			),
-			noCtx(func(_ map[string]any) (*mcp.CallToolResult, error) {
-				files, err := client.ListFilesInVault()
-				if err != nil {
-					return fail("list vault: %w", err)
-				}
-				return jsonOK(files)
-			}),
-		},
-		{
-			mcp.NewTool("obsidian_list_files_in_dir",
-				mcp.WithDescription("Lists all files and directories in a specific Obsidian vault directory."),
+			mcp.NewTool("obsidian_list_notes",
+				mcp.WithDescription("List files and directories in the vault. Omit dirpath (or pass empty) to list the vault root."),
 				mcp.WithString("dirpath",
-					mcp.Required(),
-					mcp.Description("Path to list files from (relative to vault root). Empty directories are not returned."),
+					mcp.Description("Optional vault-relative directory. Empty or omitted lists the vault root. Empty directories are not returned."),
 				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
 				dirpath := argString(args, "dirpath")
+				var (
+					files []string
+					err   error
+				)
 				if dirpath == "" {
-					return fail("dirpath is required")
+					files, err = client.ListFilesInVault()
+				} else {
+					files, err = client.ListFilesInDir(dirpath)
 				}
-				files, err := client.ListFilesInDir(dirpath)
 				if err != nil {
-					return fail("list dir: %w", err)
+					return fail("list notes: %w", err)
 				}
 				return jsonOK(files)
 			}),
 		},
 		{
-			mcp.NewTool("obsidian_get_file_contents",
-				mcp.WithDescription("Return the content of a single file in your vault."),
-				mcp.WithString("filepath",
+			mcp.NewTool("obsidian_get_note",
+				mcp.WithDescription(`Read one or more notes. Accepts a single filepath string or an array of filepaths.
+
+By default returns the raw markdown content. When frontmatter_only is true, returns just the parsed YAML frontmatter as JSON ({} when the note has none). For batch reads (array input), the result is a JSON object keyed by filepath.`),
+				// filepaths is intentionally untyped (accepts string or array); the
+				// mcp-go builders don't expose a union type, so we validate at runtime.
+				mcp.WithString("filepaths",
 					mcp.Required(),
-					mcp.Description("Path to the file (relative to vault root)."),
+					mcp.Description("A single vault-relative filepath, or a JSON array of filepaths for batch reads."),
+				),
+				mcp.WithBoolean("frontmatter_only",
+					mcp.Description("If true, return only the YAML frontmatter as JSON. Default: false."),
 				),
 			),
 			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
-				fp := argString(args, "filepath")
-				if fp == "" {
-					return fail("filepath is required")
-				}
-				content, err := client.GetFileContents(fp)
+				paths, err := argFilepaths(args, "filepaths")
 				if err != nil {
-					return fail("get file: %w", err)
+					return fail("%w", err)
 				}
-				return textOK(content)
+				frontmatterOnly := argBool(args, "frontmatter_only", false)
+				return getNoteResult(client, paths, frontmatterOnly)
 			}),
 		},
 		{
-			mcp.NewTool("obsidian_batch_get_file_contents",
-				mcp.WithDescription("Return the contents of multiple files concatenated with markdown headers."),
-				mcp.WithArray("filepaths",
-					mcp.Required(),
-					mcp.Description("List of file paths to read (relative to vault root)."),
-				),
-			),
-			noCtx(func(args map[string]any) (*mcp.CallToolResult, error) {
-				fps := argStringSlice(args, "filepaths")
-				if len(fps) == 0 {
-					return fail("filepaths must be a non-empty array")
-				}
-				return textOK(client.GetBatchFileContents(fps))
-			}),
-		},
-		{
-			mcp.NewTool("obsidian_delete_file",
-				mcp.WithDescription("Delete a file or directory from the vault."),
+			mcp.NewTool("obsidian_delete_note",
+				mcp.WithDescription("Delete a file or directory from the vault. Errors if the path does not exist."),
 				mcp.WithString("filepath",
 					mcp.Required(),
 					mcp.Description("Path to the file to delete (relative to vault root)."),
@@ -90,10 +72,42 @@ func vaultTools(client *obsidian.Client) []toolEntry {
 					return fail("filepath is required")
 				}
 				if err := client.DeleteFile(fp); err != nil {
-					return fail("delete file: %w", err)
+					return fail("delete note: %w", err)
 				}
 				return textOK("Successfully deleted " + fp)
 			}),
 		},
 	}
+}
+
+// getNoteResult dispatches based on single vs batch and frontmatter-only mode.
+func getNoteResult(client *obsidian.Client, paths []string, frontmatterOnly bool) (*mcp.CallToolResult, error) {
+	if len(paths) == 1 {
+		fp := paths[0]
+		if frontmatterOnly {
+			raw, err := client.GetFrontmatter(fp)
+			if err != nil {
+				return fail("get frontmatter: %w", err)
+			}
+			return rawOK(raw)
+		}
+		content, err := client.GetFileContents(fp)
+		if err != nil {
+			return fail("get note: %w", err)
+		}
+		return textOK(content)
+	}
+	if frontmatterOnly {
+		result := make(map[string]json.RawMessage, len(paths))
+		for _, fp := range paths {
+			raw, err := client.GetFrontmatter(fp)
+			if err != nil {
+				result[fp] = json.RawMessage(`{"error":` + jsonString(err.Error()) + `}`)
+				continue
+			}
+			result[fp] = raw
+		}
+		return jsonOK(result)
+	}
+	return textOK(client.GetBatchFileContents(paths))
 }
